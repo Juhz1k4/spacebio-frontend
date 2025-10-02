@@ -1,108 +1,112 @@
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Send, Sparkles } from "lucide-react";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useState, useEffect, useRef } from 'react';
 
-const mockAIMessages = [
-  {
-    id: 1,
-    role: "assistant",
-    text: "Olá! Sou seu assistente de IA especializado em biologia espacial. Como posso ajudar você hoje?",
-  },
-  {
-    id: 2,
-    role: "user",
-    text: "Quais são os principais desafios da agricultura em Marte?",
-  },
-  {
-    id: 3,
-    role: "assistant",
-    text: "Excelente pergunta! Os principais desafios incluem:\n\n1. **Baixa Gravidade**: Apenas 38% da gravidade terrestre afeta o crescimento das plantas\n2. **Radiação**: Falta de campo magnético protetor\n3. **Solo**: Presença de percloratos tóxicos no regolito marciano\n4. **Temperatura**: Variações extremas (-125°C a 20°C)\n5. **Atmosfera**: Apenas 0,6% da pressão terrestre\n\nGostaria de explorar algum desses pontos em mais detalhes?",
-  },
-];
+// --- Ícones ---
+const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
 
-const AIAssistant = () => {
+// --- Placeholder da Imagem ---
+const DrArisAvatar = 'https://placehold.co/128x128/083344/E0F2FE?text=Aris';
+
+// --- COMPONENTE DA PÁGINA ---
+export default function AIAssistant() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    setMessages([
+      {
+        text: "Olá! Eu sou a Dra. Aris, sua guia pelo fascinante universo da biologia espacial. Como posso te ajudar a explorar nossa vasta base de conhecimento hoje?",
+        isUser: false,
+      },
+    ]);
+  }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = { text: input, isUser: true };
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    const currentInput = input;
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: currentInput }),
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      
+      const arisMessage = { text: data.answer, isUser: false };
+      setMessages((prevMessages) => [...prevMessages, arisMessage]);
+    } catch (error) {
+      console.error("Falha ao comunicar com a Dra. Aris:", error);
+      const errorMessage = { text: "Desculpe, estou com interferência na comunicação. Tente novamente.", isUser: false };
+      setMessages((prevMessages) => [...prevMessages, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <ProtectedRoute>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <main className="flex-1">
-            <header className="sticky top-0 z-50 h-16 border-b border-border/50 bg-background/80 backdrop-blur-md flex items-center px-6">
-              <SidebarTrigger />
-              <div className="flex items-center gap-2 ml-4">
-                <Sparkles className="w-5 h-5 text-primary animate-glow" />
-                <h1 className="text-xl font-semibold">Assistente de IA</h1>
+    <div className="flex flex-col h-full bg-gray-900 text-white">
+      <header className="p-4 border-b border-gray-700">
+        <h1 className="text-2xl font-bold">Assistente de IA</h1>
+      </header>
+
+      <main className="flex-1 p-4 overflow-y-auto">
+        <div className="chat-container space-y-4">
+          {messages.map((msg, index) => (
+            <div key={index} className={`flex items-start gap-4 ${msg.isUser ? 'justify-end' : ''}`}>
+              {!msg.isUser && (
+                <img src={DrArisAvatar} alt="Dra. Aris" className="w-10 h-10 rounded-full border-2 border-cyan-400" />
+              )}
+              <div className={`p-3 rounded-lg max-w-xl ${msg.isUser ? 'bg-purple-600' : 'bg-gray-700'}`}>
+                <p style={{whiteSpace: 'pre-wrap'}}>{msg.text}</p>
               </div>
-            </header>
-          
-          <div className="h-[calc(100vh-4rem)] flex flex-col max-w-4xl mx-auto">
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {mockAIMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  {msg.role === "assistant" && (
-                    <div className="w-10 h-10 rounded-full gradient-cosmic flex items-center justify-center mr-3 flex-shrink-0">
-                      <Sparkles className="w-5 h-5 text-white" />
-                    </div>
-                  )}
-                  <Card
-                    className={`max-w-2xl p-4 ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-card/50 backdrop-blur-sm border-border/50"
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-line">{msg.text}</p>
-                  </Card>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex items-start gap-4">
+              <img src={DrArisAvatar} alt="Dra. Aris" className="w-10 h-10 rounded-full border-2 border-cyan-400" />
+              <div className="p-3 rounded-lg bg-gray-700">
+                <div className="flex items-center space-x-1">
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:-0.3s]"></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:-0.15s]"></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
                 </div>
-              ))}
-
-              {/* Suggestion Cards */}
-              <div className="grid md:grid-cols-2 gap-3 mt-8">
-                {[
-                  "Como a radiação espacial afeta DNA?",
-                  "Técnicas de cultivo hidropônico em órbita",
-                  "Efeitos da microgravidade no sistema imunológico",
-                  "Bioprospecção em ambientes extremos",
-                ].map((suggestion, i) => (
-                  <Card
-                    key={i}
-                    className="p-4 cursor-pointer hover:bg-accent/50 transition-colors border-border/50"
-                  >
-                    <p className="text-sm">{suggestion}</p>
-                  </Card>
-                ))}
               </div>
             </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+      </main>
 
-            {/* Input Area */}
-            <div className="p-6 border-t border-border/50 bg-background/80 backdrop-blur-md">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Pergunte sobre biologia espacial, pesquisas, análises..."
-                  className="bg-input/50 backdrop-blur-sm"
-                />
-                <Button size="icon" className="gradient-cosmic glow-primary">
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Assistente alimentado por IA avançada • Especializado em biologia espacial
-              </p>
-            </div>
-          </div>
-        </main>
-      </div>
-    </SidebarProvider>
-    </ProtectedRoute>
+      <footer className="p-4 border-t border-gray-700">
+        <form onSubmit={sendMessage} className="flex gap-2 items-center">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Pergunte sobre biologia espacial, pesquisas, análises..."
+            className="flex-1 p-3 bg-gray-800 rounded-full focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            disabled={isLoading}
+          />
+          <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white font-bold p-3 rounded-full disabled:bg-gray-600" disabled={isLoading || !input.trim()}>
+            <SendIcon />
+          </button>
+        </form>
+      </footer>
+    </div>
   );
-};
+}
 
-export default AIAssistant;
