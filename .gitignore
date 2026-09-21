@@ -22,3 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Variaveis de ambiente e segredos (SEGURANCA)
+# O .env foi versionado por engano e expos a senha do banco Supabase.
+# Nunca versionar: use .env.example como modelo.
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+*.pem
