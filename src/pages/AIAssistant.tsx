@@ -54,8 +54,13 @@ const SUGGESTION_CHIPS = [
     question: "Qual o papel do gene RUNX2 na formação óssea durante o voo espacial?",
   },
   {
-    label: "🐭 Experimentos NASA",
-    question: "Quais experimentos com camundongos foram feitos na Estação Espacial Internacional?",
+    // A formulação mudou por medição, não por gosto. "Quais experimentos com
+    // camundongos foram feitos na ISS?" pontua 0,910 e cai ABAIXO do limiar de
+    // 0,92 -- o chip levava a uma recusa. Perguntas por inventário ("quais
+    // foram feitos") casam mal com um corpus que descreve resultados, não
+    // catálogos. Perguntando pelo EFEITO, sobe para 0,9244.
+    label: "🐭 Modelos animais",
+    question: "Como o voo espacial afeta a fisiologia de camundongos?",
   },
   {
     label: "☢️ Radiação",
