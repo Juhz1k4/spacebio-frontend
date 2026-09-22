@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles } from "lucide-react";
+import { BookMarked, Send } from "lucide-react";
 
 import { ConnectionError } from "@/components/evidence/AnswerStates";
 import { EvidencePanel } from "@/components/evidence/EvidencePanel";
@@ -33,11 +33,34 @@ const GREETING =
   "artigos indexados no nosso corpus — e digo quando não encontro evidência " +
   "para sustentar uma resposta.";
 
-/** Perguntas que funcionam bem, para quem chega sem saber o que perguntar. */
-const SUGGESTIONS = [
-  "Como a microgravidade afeta a densidade óssea?",
-  "Quais genes respondem à radiação espacial?",
-  "O que acontece com o sistema imune em voo espacial?",
+/**
+ * Chips de entrada para quem chega sem saber o que perguntar.
+ *
+ * O rótulo é curto e temático; a pergunta enviada é completa e formulada
+ * como a busca espera. Essa separação importa: "🦴 Microgravidade & Ossos"
+ * não é uma boa consulta — falta o verbo e a especificidade que o retriever
+ * usa. O usuário vê o tema, o sistema recebe a pergunta.
+ *
+ * Os quatro temas cobrem os pilares do corpus, verificados na extração de
+ * entidades: perda óssea, expressão gênica, modelos animais e radiação.
+ */
+const SUGGESTION_CHIPS = [
+  {
+    label: "🦴 Microgravidade & Ossos",
+    question: "Como a microgravidade afeta a densidade óssea?",
+  },
+  {
+    label: "🧬 Expressão Gênica RUNX2",
+    question: "Qual o papel do gene RUNX2 na formação óssea durante o voo espacial?",
+  },
+  {
+    label: "🐭 Experimentos NASA",
+    question: "Quais experimentos com camundongos foram feitos na Estação Espacial Internacional?",
+  },
+  {
+    label: "☢️ Radiação",
+    question: "Como a radiação espacial causa danos ao DNA?",
+  },
 ];
 
 /** Uma troca: a pergunta e o que voltou (resposta, erro, ou nada ainda). */
@@ -125,19 +148,34 @@ export default function AIAssistant() {
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2 pl-12">
-                {SUGGESTIONS.map((suggestion) => (
-                  <Button
-                    key={suggestion}
-                    variant="outline"
-                    size="sm"
-                    className="h-auto whitespace-normal py-1.5 text-left text-xs"
-                    onClick={() => ask(suggestion)}
-                  >
-                    <Sparkles className="mr-1.5 h-3 w-3 shrink-0" aria-hidden />
-                    {suggestion}
-                  </Button>
-                ))}
+              <div className="space-y-3 pl-12">
+                <div className="flex flex-wrap gap-2">
+                  {SUGGESTION_CHIPS.map((chip) => (
+                    <Button
+                      key={chip.label}
+                      variant="outline"
+                      size="sm"
+                      className="h-auto whitespace-normal border-border/60 py-1.5 text-left text-xs hover:border-primary/60 hover:bg-primary/5"
+                      onClick={() => ask(chip.question)}
+                      title={chip.question}
+                    >
+                      {chip.label}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* O banner responde antes da primeira recusa. Um usuário que
+                    sabe o escopo não interpreta "sem evidência" como defeito —
+                    e é a recusa que mais vale explicar de antemão. */}
+                <p className="flex items-start gap-2 rounded-md border border-secondary/30 bg-secondary/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                  <BookMarked className="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary" aria-hidden />
+                  <span>
+                    A Dra. Aris consulta exclusivamente{" "}
+                    <strong className="text-foreground">493 artigos de Biologia Espacial</strong>{" "}
+                    revisados por pares. Fora desse acervo, ela informa que não há
+                    evidência em vez de arriscar uma resposta.
+                  </span>
+                </p>
               </div>
             </div>
           )}
