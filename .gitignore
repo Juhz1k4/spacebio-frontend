@@ -24,8 +24,10 @@ dist-ssr
 *.sw?
 
 # Variaveis de ambiente e segredos (SEGURANCA)
-# O .env foi versionado por engano e expos a senha do banco Supabase.
-# Nunca versionar: use .env.example como modelo.
+# O .env chegou a ser versionado. O que havia nele eram as chaves publicas do
+# Supabase (project id, anon key, URL) - publicas por design, nenhuma senha foi
+# exposta. Ainda assim o arquivo nao pertence ao versionamento: e onde os
+# segredos locais sao colocados. Use .env.example como modelo.
 .env
 .env.local
 .env.*.local
