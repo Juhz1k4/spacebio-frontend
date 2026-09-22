@@ -81,7 +81,10 @@ export function EvidencePanel({ answer }: { answer: EvidenceAnswer }) {
         </>
       )}
 
-      <AnswerWarnings warnings={answer.warnings} />
+      <AnswerWarnings
+        warnings={answer.warnings}
+        tone={refusal ? "explanation" : "problem"}
+      />
 
       {/* --- SCIENTIFIC EVIDENCE --- */}
       {answer.sources.length > 0 && (
@@ -109,10 +112,20 @@ export function EvidencePanel({ answer }: { answer: EvidenceAnswer }) {
           </div>
 
           {uncited.length > 0 && (
-            <details className="group">
-              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+            <details className="group rounded-md border border-border/40 p-3">
+              <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
                 {uncited.length} trecho(s) recuperado(s) que a resposta não citou
               </summary>
+              {/* Esta explicação não é detalhe: sem ela, "não citado" parece
+                  falha de recuperação. É o oposto — é a seletividade da
+                  assistente, e é o que separa citar evidência de despejar
+                  tudo o que a busca trouxe. */}
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                Estes trechos foram recuperados na busca, mas descartados pelo filtro
+                de seletividade da Dra. Aris por não conterem evidências diretas para
+                a pergunta. Ficam aqui para auditoria: você pode conferir o que o
+                sistema encontrou e decidiu não usar.
+              </p>
               <div className="mt-3 space-y-3">
                 {uncited.map((source) => (
                   <SourceCard key={source.chunk_id} source={source} />

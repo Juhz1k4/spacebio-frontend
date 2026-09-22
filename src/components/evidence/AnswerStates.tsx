@@ -20,7 +20,7 @@
  * vermelho de destrutivo, que sinalizaria defeito.
  */
 
-import { AlertTriangle, PlugZap, ShieldCheck, WifiOff } from "lucide-react";
+import { AlertTriangle, Info, PlugZap, ShieldCheck, WifiOff } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { EvidenceAnswer } from "@/types/evidence";
@@ -83,18 +83,58 @@ export function DegradedAnswer({ answer }: { answer: EvidenceAnswer }) {
   );
 }
 
-/** Avisos que o backend anexou à resposta. */
-export function AnswerWarnings({ warnings }: { warnings: string[] }) {
+/**
+ * Avisos que o backend anexou à resposta.
+ *
+ * O TOM DEPENDE DO CONTEXTO, e isso importa.
+ *
+ * Quando acompanham uma RECUSA, os avisos apenas explicam por que ela
+ * aconteceu ("a melhor passagem ficou abaixo do limiar") — são a memória de
+ * cálculo de uma decisão correta. Em vermelho de erro, contradizem a mensagem
+ * logo acima, que diz ao usuário que a recusa é rigor e não defeito.
+ *
+ * Quando acompanham uma RESPOSTA, sinalizam algo que deu errado de fato:
+ * citação a fonte inexistente, texto truncado por limite de tokens. Aí o
+ * vermelho é adequado.
+ */
+export function AnswerWarnings({
+  warnings,
+  tone = "problem",
+}: {
+  warnings: string[];
+  /** "explanation" quando acompanham uma recusa esperada. */
+  tone?: "problem" | "explanation";
+}) {
   if (warnings.length === 0) return null;
 
+  const isExplanation = tone === "explanation";
+
   return (
-    <Alert variant="destructive" className="border-destructive/40 bg-destructive/5">
-      <AlertTriangle className="h-4 w-4" />
-      <AlertTitle>
-        {warnings.length === 1 ? "Ressalva" : `${warnings.length} ressalvas`}
+    <Alert
+      className={
+        isExplanation
+          ? "border-border/60 bg-muted/30"
+          : "border-destructive/40 bg-destructive/5 text-destructive"
+      }
+    >
+      {isExplanation ? (
+        <Info className="h-4 w-4 text-muted-foreground" />
+      ) : (
+        <AlertTriangle className="h-4 w-4" />
+      )}
+      <AlertTitle className={isExplanation ? "text-foreground/80" : undefined}>
+        {isExplanation
+          ? "Por que não respondi"
+          : warnings.length === 1
+            ? "Ressalva"
+            : `${warnings.length} ressalvas`}
       </AlertTitle>
       <AlertDescription>
-        <ul className="list-disc space-y-1 pl-4 text-sm">
+        <ul
+          className={`list-disc space-y-1 pl-4 text-sm ${
+            isExplanation ? "text-muted-foreground" : ""
+          }`}
+        >
           {warnings.map((warning, index) => (
             <li key={index}>{warning}</li>
           ))}
