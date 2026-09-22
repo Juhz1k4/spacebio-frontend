@@ -24,8 +24,23 @@ import type {
   HealthResponse,
 } from "@/types/evidence";
 
+/**
+ * Endereco do backend.
+ *
+ * O padrao e 127.0.0.1, nunca `localhost`, e a diferenca nao e cosmetica.
+ * No Windows `localhost` resolve para `::1` (IPv6) ANTES de 127.0.0.1, e o
+ * uvicorn sobe ligado a `0.0.0.0`, que e apenas IPv4. A tentativa IPv6
+ * precisa estourar o timeout do resolver antes de cair para IPv4.
+ *
+ * Medido nesta maquina, GET /api/v1/health, mediana de 5 execucoes:
+ *     via `localhost`  ->  2073 ms
+ *     via 127.0.0.1    ->    37 ms
+ *
+ * Sao ~2 s somados a TODA requisicao, invisiveis no codigo e faceis de
+ * confundir com lentidao do modelo. Ver docs/RETRIEVAL_AUDIT.md no backend.
+ */
 const API_BASE_URL =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
+  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://127.0.0.1:8000";
 
 /** Tempo máximo de espera. O caminho completo inclui embedding + LLM. */
 const REQUEST_TIMEOUT_MS = 60_000;
