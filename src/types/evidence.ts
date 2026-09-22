@@ -135,6 +135,28 @@ export interface MentionedEntity {
  * interface deve apresentá-la como rigor científico, com destaque próprio.
  * Renderizar como falha de rede destrói exatamente o que a torna valiosa.
  */
+/**
+ * Conferência de um trecho entre aspas (E3-02).
+ *
+ * A Dra. Aris sintetiza em português a partir de passagens em inglês, e a
+ * regra de idioma manda não traduzir o que estiver entre aspas. O backend
+ * procura cada trecho literalmente nas passagens recuperadas; o que não é
+ * encontrado perde as aspas no texto e aparece aqui com `verified: false`.
+ *
+ * `verified: false` significa inventado OU traduzido — os dois falham pelo
+ * mesmo teste, porque nenhum dos dois existe no original em inglês.
+ */
+export interface QuoteCheck {
+  /** O trecho entre aspas, como o modelo escreveu. */
+  quote: string;
+
+  /** O trecho existe literalmente em alguma passagem recuperada? */
+  verified: boolean;
+
+  /** Índice [n] da fonte que contém o trecho, quando verificado. */
+  source_index: number | null;
+}
+
 export interface EvidenceAnswer {
   answer: string;
   sources: EvidenceSource[];
@@ -153,6 +175,15 @@ export interface EvidenceAnswer {
    * Quando não vazio, deve ser exibido.
    */
   warnings: string[];
+
+  /**
+   * Conferência dos trechos entre aspas (E3-02).
+   *
+   * Lista vazia significa que a resposta não trouxe citação literal longa o
+   * bastante para conferir — NÃO que a conferência foi pulada. Campo opcional
+   * porque uma resposta servida de cache gravado antes da E3-02 não o tem.
+   */
+  quote_checks?: QuoteCheck[];
 }
 
 /** Corpo aceito por POST /api/v1/chat. */
@@ -219,6 +250,17 @@ export function isDegradedAnswer(answer: EvidenceAnswer): boolean {
 export type AnswerSegment =
   | { kind: "text"; content: string }
   | { kind: "citation"; indices: number[]; raw: string };
+
+/**
+ * Trechos entre aspas que não foram encontrados nas passagens (E3-02).
+ *
+ * Quando não vazio, o backend JÁ removeu as aspas do texto da resposta — não
+ * há nada a corrigir na renderização. Serve para exibir a conferência ao
+ * leitor que queira auditar, e o aviso correspondente já vem em `warnings`.
+ */
+export function unverifiedQuotes(answer: EvidenceAnswer): QuoteCheck[] {
+  return (answer.quote_checks ?? []).filter((check) => !check.verified);
+}
 
 export function parseAnswerSegments(answer: string): AnswerSegment[] {
   const pattern = /\[(\d+(?:\s*,\s*\d+)*)\]/g;
