@@ -24,6 +24,33 @@ export type RetrievalChannel = "semantic" | "lexical" | "entity";
  * É a unidade de evidência. Nunca apenas o título — sempre o texto que
  * sustenta a afirmação.
  */
+/**
+ * Metadados bibliográficos de uma fonte (E3-06).
+ *
+ * Espelha `CitationMetadata` de `evidence.py`. Vem do Crossref, ingerido no
+ * grafo por `enrich_metadata.py`, e chega JUNTO da resposta — não é buscado
+ * sob demanda. A alternativa seria uma ida à rede por cartão de fonte, seis
+ * por resposta, para obter um dado que nunca muda.
+ *
+ * Todos os campos podem faltar. Cobertura medida: 488 de 493 publicações
+ * (99,0%) têm autores e ano; as 5 restantes não têm DOI, então não há
+ * registro a buscar. `citation.ts` precisa produzir algo útil mesmo assim.
+ */
+export interface CitationMetadata {
+  /**
+   * Autores em forma canônica "Sobrenome, Nome".
+   *
+   * Consórcios e instituições vêm sem vírgula ("The ISS Consortium"), e a
+   * formatação os reconhece exatamente por isso — ver `splitName`.
+   */
+  authors: string[];
+  year: number | null;
+  journal: string | null;
+  volume: string | null;
+  issue: string | null;
+  pages: string | null;
+}
+
 export interface EvidenceSource {
   /** O número usado no texto da resposta: [1], [2], ... Começa em 1. */
   citation_index: number;
@@ -76,6 +103,14 @@ export interface EvidenceSource {
    * secundárias, nunca com o mesmo peso das citadas.
    */
   cited: boolean;
+
+  /**
+   * Metadados para exportar a referência em ABNT ou BibTeX (E3-06).
+   *
+   * Opcional porque uma resposta do cache de demonstração gravada antes da
+   * E3-06 não o carrega. Ausente, a exportação cai na forma simplificada.
+   */
+  citation?: CitationMetadata;
 }
 
 /**

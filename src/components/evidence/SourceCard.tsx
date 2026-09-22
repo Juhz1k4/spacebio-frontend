@@ -18,10 +18,21 @@
  */
 
 import { useState } from "react";
-import { BookOpen, ExternalLink, Quote, Search, Sparkles, Network } from "lucide-react";
+import {
+  BookOpen,
+  Check,
+  Copy,
+  ExternalLink,
+  Quote,
+  Search,
+  Sparkles,
+  Network,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { copyToClipboard, toAbnt, toBibtex } from "@/lib/citation";
 import { cn } from "@/lib/utils";
 import type { EvidenceSource, RetrievalChannel } from "@/types/evidence";
 
@@ -160,6 +171,8 @@ export function SourceCard({ source, highlighted = false }: SourceCardProps) {
           </a>
         )}
 
+        <CitationActions source={source} />
+
         <div className="ml-auto flex items-center gap-1.5">
           {source.channels.map((channel) => {
             const info = CHANNEL_INFO[channel];
@@ -180,5 +193,83 @@ export function SourceCard({ source, highlighted = false }: SourceCardProps) {
         </div>
       </footer>
     </article>
+  );
+}
+
+
+/**
+ * Botões de exportação da referência (E3-07).
+ *
+ * Discretos de propósito: a referência é uma ação secundária, e dois botões
+ * chamativos no rodapé competiriam com o DOI e o link para o PMC, que são o
+ * que o leitor procura primeiro.
+ *
+ * O feedback é duplo. O toast confirma para quem estava olhando a tela; o
+ * ícone que vira um "check" por dois segundos confirma para quem estava
+ * olhando o cursor. Um só dos dois deixa metade dos usuários em dúvida sobre
+ * se o clique funcionou.
+ */
+function CitationActions({ source }: { source: EvidenceSource }) {
+  const [copiado, setCopiado] = useState<"abnt" | "bibtex" | null>(null);
+
+  async function copiar(formato: "abnt" | "bibtex") {
+    const referencia = formato === "abnt" ? toAbnt(source) : toBibtex(source);
+    const ok = await copyToClipboard(referencia.text);
+
+    if (!ok) {
+      // Falha de clipboard é rara mas real (permissão negada, contexto
+      // inseguro sem execCommand). Dizer isso é melhor que um silêncio que
+      // o usuário interpreta como "copiou".
+      toast.error("Não foi possível copiar", {
+        description: "Selecione o texto da referência manualmente.",
+      });
+      return;
+    }
+
+    setCopiado(formato);
+    window.setTimeout(() => setCopiado(null), 2000);
+
+    // Quando faltam dados, o aviso vem junto: a referência foi copiada e é
+    // usável, mas quem for colar num trabalho precisa saber que está
+    // incompleta. Silenciar isso faria alguém entregar uma bibliografia com
+    // furo sem perceber.
+    const rotulo = formato === "abnt" ? "Referência ABNT copiada" : "BibTeX copiado";
+    if (referencia.quality === "complete") {
+      toast.success(rotulo);
+    } else {
+      toast.success(rotulo, {
+        description: `Sem ${referencia.missing.join(", ")} — complete à mão antes de usar.`,
+      });
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      {(["abnt", "bibtex"] as const).map((formato) => {
+        const ativo = copiado === formato;
+        return (
+          <Button
+            key={formato}
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => copiar(formato)}
+            className="h-6 gap-1 px-1.5 text-[11px] font-normal text-muted-foreground hover:text-foreground"
+            title={
+              formato === "abnt"
+                ? "Copiar a referência no formato ABNT (NBR 6023)"
+                : "Copiar a entrada BibTeX para gerenciadores de referência"
+            }
+          >
+            {ativo ? (
+              <Check className="h-3 w-3 text-secondary" aria-hidden />
+            ) : (
+              <Copy className="h-3 w-3" aria-hidden />
+            )}
+            {formato === "abnt" ? "ABNT" : "BibTeX"}
+          </Button>
+        );
+      })}
+    </div>
   );
 }
