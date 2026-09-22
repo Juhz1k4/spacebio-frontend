@@ -136,6 +136,35 @@ export interface MentionedEntity {
  * Renderizar como falha de rede destrói exatamente o que a torna valiosa.
  */
 /**
+ * Estado da resposta (E3-04).
+ *
+ * Existe para que o cliente decida COMO renderizar sem inferir isso de campos
+ * soltos. Antes, "recusei por falta de evidência" e "achei a evidência mas não
+ * consegui redigir" se distinguiam cruzando `grounded`, `sources` e o texto de
+ * `warnings` — e as duas têm `grounded: false`, o que tornava a leitura
+ * ambígua. São situações opostas para quem lê a tela.
+ *
+ *   ok                     — resposta sintetizada normalmente
+ *   synthesis_unavailable  — evidência completa, síntese falhou ou demorou
+ *   insufficient_evidence  — o corpus não cobre a pergunta
+ */
+export type AnswerStatus =
+  | "ok"
+  | "synthesis_unavailable"
+  | "insufficient_evidence";
+
+/**
+ * Texto exibido quando a evidência foi recuperada mas a síntese falhou.
+ *
+ * Fica declarado aqui, e não só vindo do backend, porque a tela não deve
+ * depender da cópia que chegou pela rede para exibir a mensagem certa — numa
+ * falha de conexão parcial, `answer` pode chegar vazio.
+ */
+export const SYNTHESIS_UNAVAILABLE_MESSAGE =
+  "Os documentos relevantes foram recuperados com sucesso, mas a síntese em " +
+  "texto está temporariamente indisponível devido a uma falha de conexão.";
+
+/**
  * Conferência de um trecho entre aspas (E3-02).
  *
  * A Dra. Aris sintetiza em português a partir de passagens em inglês, e a
@@ -166,6 +195,15 @@ export interface EvidenceAnswer {
 
   /** A resposta está sustentada em evidência verificada do corpus? */
   grounded: boolean;
+
+  /**
+   * Estado da resposta (E3-04).
+   *
+   * Opcional porque uma resposta servida do cache de demonstração gravado
+   * antes da E3-04 não o carrega. Ausente, trate como "ok" e recaia na
+   * heurística de `isDegradedAnswer`.
+   */
+  status?: AnswerStatus;
 
   /**
    * O que o sistema notou e o leitor precisa saber.
@@ -237,7 +275,22 @@ export function isEvidenceRefusal(answer: EvidenceAnswer): boolean {
  * devem ser mostradas.
  */
 export function isDegradedAnswer(answer: EvidenceAnswer): boolean {
+  // `status` é a fonte de verdade desde a E3-04. A heurística antiga
+  // permanece como fallback para respostas gravadas em cache antes dele --
+  // e continua correta, porque só a degradação combina "sem lastro" com
+  // "tem fontes".
+  if (answer.status) return answer.status === "synthesis_unavailable";
   return !answer.grounded && answer.sources.length > 0;
+}
+
+/**
+ * A evidência veio completa, mas a síntese em texto falhou (E3-04).
+ *
+ * Isto NÃO é um erro a exibir como tal: a recuperação funcionou e os trechos
+ * estão todos no payload. O que falta é o parágrafo que os resumiria.
+ */
+export function isSynthesisUnavailable(answer: EvidenceAnswer): boolean {
+  return isDegradedAnswer(answer);
 }
 
 /**

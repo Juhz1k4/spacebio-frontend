@@ -46,7 +46,14 @@ const ENTITY_TONE: Record<string, string> = {
   Dataset: "border-teal-500/40 text-teal-400",
 };
 
-export function EvidencePanel({ answer }: { answer: EvidenceAnswer }) {
+export function EvidencePanel({
+  answer,
+  onRetry,
+}: {
+  answer: EvidenceAnswer;
+  /** Reexecuta a mesma pergunta. Só é usado no estado degradado (E3-04). */
+  onRetry?: () => void;
+}) {
   const [highlighted, setHighlighted] = useState<number | null>(null);
 
   // Clicar numa citação leva à fonte e a destaca por um instante — sem o
@@ -70,7 +77,7 @@ export function EvidencePanel({ answer }: { answer: EvidenceAnswer }) {
         <EvidenceRefusal answer={answer} />
       ) : (
         <>
-          {degraded && <DegradedAnswer answer={answer} />}
+          {degraded && <DegradedAnswer answer={answer} onRetry={onRetry} />}
           {!degraded && (
             <AnswerText
               answer={answer.answer}
@@ -81,9 +88,14 @@ export function EvidencePanel({ answer }: { answer: EvidenceAnswer }) {
         </>
       )}
 
+      {/* O tom do aviso segue o estado. Na recusa ele explica o porquê; na
+          degradação ele carrega a causa técnica (timeout, quota), que é nota
+          de rodapé e não defeito da resposta — em vermelho, contradiria a
+          mensagem neutra logo acima. Só numa resposta sintetizada um aviso
+          significa mesmo que algo saiu errado. */}
       <AnswerWarnings
         warnings={answer.warnings}
-        tone={refusal ? "explanation" : "problem"}
+        tone={refusal ? "refusal" : degraded ? "technical" : "problem"}
       />
 
       {/* --- SCIENTIFIC EVIDENCE --- */}

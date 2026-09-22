@@ -24,7 +24,7 @@ import { EvidencePanel } from "@/components/evidence/EvidencePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, askAris } from "@/lib/api";
-import type { EvidenceAnswer } from "@/types/evidence";
+import { isSynthesisUnavailable, type EvidenceAnswer } from "@/types/evidence";
 
 const DR_ARIS_AVATAR = "https://placehold.co/128x128/083344/E0F2FE?text=Aris";
 
@@ -80,28 +80,51 @@ export default function AIAssistant() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [exchanges, isLoading]);
 
-  async function ask(question: string) {
+  /**
+   * Envia a pergunta.
+   *
+   * `replaceIndex` reexecuta uma troca que já existe, sobrescrevendo-a em vez
+   * de empilhar outra (E3-04). Sem isso, "tentar novamente" repetiria a
+   * pergunta na tela e daria a impressão de que o usuário perguntou duas
+   * vezes — quando o que houve foi uma falha do provedor, não dele.
+   */
+  async function ask(question: string, replaceIndex?: number) {
     const trimmed = question.trim();
     if (!trimmed || isLoading) return;
 
-    setInput("");
+    const isRetry = replaceIndex !== undefined;
+    if (!isRetry) setInput("");
     setIsLoading(true);
-    setExchanges((previous) => [...previous, { question: trimmed }]);
+    setExchanges((previous) => {
+      const next = [...previous];
+      const slot = isRetry ? replaceIndex! : next.length;
+      next[slot] = { question: trimmed };
+      return next;
+    });
+    const slot = isRetry ? replaceIndex! : exchanges.length;
 
     try {
       const answer = await askAris(trimmed);
       setExchanges((previous) => {
         const next = [...previous];
-        next[next.length - 1] = { question: trimmed, answer };
+        next[slot] = { question: trimmed, answer };
         return next;
       });
+
+      // E3-04 -- a síntese falhou, mas a evidência veio. A pergunta volta ao
+      // campo para que reexecutar seja um Enter, e não redigitar tudo. O
+      // backend devolveu 200: do ponto de vista da rede nada falhou, então a
+      // interface não pode se comportar como se tivesse.
+      if (isSynthesisUnavailable(answer)) setInput(trimmed);
     } catch (cause) {
       // Só chega aqui falha real de comunicação. Falta de evidência volta
       // como resposta bem-sucedida com `grounded: false`.
       const apiError = cause instanceof ApiError ? cause : null;
+      // Falha real de rede: o texto também volta ao campo, pela mesma razão.
+      setInput(trimmed);
       setExchanges((previous) => {
         const next = [...previous];
-        next[next.length - 1] = {
+        next[slot] = {
           question: trimmed,
           error: {
             message: apiError?.message ?? "Erro inesperado ao consultar a Dra. Aris.",
@@ -196,7 +219,10 @@ export default function AIAssistant() {
                     className="mt-1 h-9 w-9 shrink-0 rounded-full border-2 border-secondary"
                   />
                   <div className="min-w-0 flex-1">
-                    <EvidencePanel answer={exchange.answer} />
+                    <EvidencePanel
+                      answer={exchange.answer}
+                      onRetry={() => ask(exchange.question, index)}
+                    />
                   </div>
                 </div>
               )}

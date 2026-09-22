@@ -9,9 +9,11 @@
  *                     este sistema de um chatbot. Apresentar como falha
  *                     destruiria exatamente o que a torna valiosa (§15.7).
  *
- *   DegradedAnswer    A evidência existe, a síntese não foi gerada (quota do
- *                     LLM esgotada, provedor fora). As passagens continuam
- *                     válidas e devem ser lidas.
+ *   DegradedAnswer    A evidência existe, a síntese não foi gerada (timeout,
+ *                     quota esgotada, provedor fora). As passagens continuam
+ *                     válidas e devem ser lidas. Tom NEUTRO, nunca vermelho
+ *                     nem âmbar: o trabalho de recuperação foi feito, e a
+ *                     cor decide a leitura antes do texto (E3-04).
  *
  *   ConnectionError   A requisição não chegou, ou o backend está sem Neo4j.
  *                     Aqui sim algo está quebrado.
@@ -20,10 +22,21 @@
  * vermelho de destrutivo, que sinalizaria defeito.
  */
 
-import { AlertTriangle, Info, PlugZap, ShieldCheck, WifiOff } from "lucide-react";
+import {
+  AlertTriangle,
+  FileSearch,
+  Info,
+  RotateCw,
+  ShieldCheck,
+  WifiOff,
+} from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { EvidenceAnswer } from "@/types/evidence";
+import { Button } from "@/components/ui/button";
+import {
+  SYNTHESIS_UNAVAILABLE_MESSAGE,
+  type EvidenceAnswer,
+} from "@/types/evidence";
 
 /**
  * A assistente não encontrou evidência suficiente e disse isso.
@@ -64,20 +77,56 @@ export function EvidenceRefusal({ answer }: { answer: EvidenceAnswer }) {
   );
 }
 
-/** A evidência existe, mas não houve síntese. */
-export function DegradedAnswer({ answer }: { answer: EvidenceAnswer }) {
+/**
+ * A evidência veio completa, mas a síntese não (E3-04).
+ *
+ * POR QUE ESTE ESTADO NÃO É VERMELHO NEM ÂMBAR
+ * --------------------------------------------
+ * A versão anterior usava âmbar com ícone de tomada desconectada. Era honesto
+ * e era ruim: sinalizava avaria justamente quando o sistema fez o trabalho
+ * difícil. A recuperação rodou, os trechos estão todos na tela, com DOI e
+ * procedência. O que faltou foi o parágrafo que os resumiria.
+ *
+ * Numa demonstração, a cor decide a leitura antes do texto. Âmbar faz o
+ * avaliador concluir "quebrou"; o tom neutro deixa que ele leia a mensagem e
+ * veja as fontes logo abaixo — que é a conclusão correta.
+ *
+ * O ícone é de busca concluída, não de falha. A causa técnica exata não vem
+ * aqui: ela vai em `warnings`, em tom de nota de rodapé.
+ */
+export function DegradedAnswer({
+  answer,
+  onRetry,
+}: {
+  answer: EvidenceAnswer;
+  onRetry?: () => void;
+}) {
   return (
-    <Alert className="border-amber-500/40 bg-amber-500/5">
-      <PlugZap className="h-4 w-4 text-amber-500" />
-      <AlertTitle className="text-amber-500">
-        Evidência recuperada, síntese indisponível
+    <Alert className="border-border bg-muted/40">
+      <FileSearch className="h-4 w-4 text-muted-foreground" />
+      <AlertTitle className="text-foreground">
+        Evidência recuperada
       </AlertTitle>
-      <AlertDescription className="space-y-1 text-foreground/80">
-        <p>{answer.answer}</p>
+      <AlertDescription className="space-y-3 text-foreground/80">
+        {/* Preferimos a cópia local à que veio pela rede: numa falha parcial
+            de conexão, `answer` pode chegar vazio. */}
+        <p>{answer.answer?.trim() || SYNTHESIS_UNAVAILABLE_MESSAGE}</p>
         <p className="text-xs text-muted-foreground">
-          Os trechos abaixo vieram do corpus e são confiáveis; apenas o resumo
-          em linguagem natural não pôde ser gerado.
+          Os {answer.sources.length} trecho(s) abaixo vieram do corpus e são
+          confiáveis — apenas o resumo em linguagem natural não pôde ser gerado.
         </p>
+        {onRetry && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            className="h-8 gap-1.5 text-xs"
+          >
+            <RotateCw className="h-3.5 w-3.5" aria-hidden />
+            Tentar gerar a síntese novamente
+          </Button>
+        )}
       </AlertDescription>
     </Alert>
   );
@@ -102,12 +151,22 @@ export function AnswerWarnings({
   tone = "problem",
 }: {
   warnings: string[];
-  /** "explanation" quando acompanham uma recusa esperada. */
-  tone?: "problem" | "explanation";
+  /**
+   * Como ler os avisos. Nenhum dos três é cosmético:
+   *
+   *   problem   — algo saiu errado NESTA resposta (citação a fonte
+   *               inexistente, texto truncado). Vermelho é adequado.
+   *   refusal   — a memória de cálculo de uma recusa correta. Em vermelho,
+   *               contradiria a mensagem acima, que diz que recusar é rigor.
+   *   technical — a causa de uma degradação (timeout, quota). O sistema
+   *               respondeu: entregou as passagens. Dizer "por que não
+   *               respondi" aqui seria falso (E3-04).
+   */
+  tone?: "problem" | "refusal" | "technical";
 }) {
   if (warnings.length === 0) return null;
 
-  const isExplanation = tone === "explanation";
+  const isExplanation = tone === "refusal" || tone === "technical";
 
   return (
     <Alert
@@ -123,11 +182,13 @@ export function AnswerWarnings({
         <AlertTriangle className="h-4 w-4" />
       )}
       <AlertTitle className={isExplanation ? "text-foreground/80" : undefined}>
-        {isExplanation
+        {tone === "refusal"
           ? "Por que não respondi"
-          : warnings.length === 1
-            ? "Ressalva"
-            : `${warnings.length} ressalvas`}
+          : tone === "technical"
+            ? "Detalhe técnico"
+            : warnings.length === 1
+              ? "Ressalva"
+              : `${warnings.length} ressalvas`}
       </AlertTitle>
       <AlertDescription>
         <ul
