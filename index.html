@@ -1,32 +1,14 @@
 <!doctype html>
 <!--
-  F0-2 — metadados da página corrigidos.
+  Metadados corrigidos na F0-2: titulo, description e og: passaram a descrever
+  o que o sistema faz. As tags de imagem de compartilhamento foram removidas e
+  voltam na B10, com imagem propria.
 
-  O que havia aqui, e por que cada item saiu:
-
-  lang="en"          o conteúdo é todo em português. O atributo errado faz o
-                     leitor de tela pronunciar o texto com fonemas de inglês,
-                     e o navegador oferecer tradução de uma página já
-                     traduzida.
-
-  título e descrição posicionavam o produto como "rede social para
-                     pesquisadores" que permite "conectar-se e publicar
-                     artigos". Nada disso existe no código.
-
-  og:image e
-  twitter:image      apontavam para uma imagem hospedada em lovable.dev, a
-                     ferramenta que gerou o esqueleto do projeto. A prévia de
-                     compartilhamento exibiria a marca de terceiro no lugar
-                     da nossa.
-
-  twitter:site       era @lovable_dev, atribuindo o projeto a outra conta.
-
-  As duas tags de imagem foram REMOVIDAS, não substituídas: a imagem de
-  compartilhamento (1200×630) é a issue B10, e uma prévia sem imagem é melhor
-  que uma prévia com a marca errada.
-
-  A redação definitiva de posicionamento é escopo da A1; o texto abaixo
-  apenas descreve o que o sistema faz hoje.
+  COMENTARIO CURTO DE PROPOSITO: comentario em HTML NAO e removido no build --
+  vai inteiro para o navegador de quem abre a pagina. A versao anterior deste
+  bloco tinha 27 linhas e respondia por quase todo o peso do index.html
+  gerado. O porque de cada mudanca esta no commit da F0-2, que e onde ele
+  serve a quem le o codigo sem custar bytes a quem le a pagina.
 -->
 <html lang="pt-BR">
   <head>
