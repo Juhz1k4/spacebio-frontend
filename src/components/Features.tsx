@@ -1,36 +1,47 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, FileText, Sparkles, Users, Share2, TrendingUp } from "lucide-react";
+import { BookMarked, Quote, ScanSearch, ShieldCheck } from "lucide-react";
 
+/**
+ * F0-2 -- CARTÕES REESCRITOS PARA DESCREVER O QUE EXISTE.
+ *
+ * Os seis anteriores prometiam: rede profissional, publicação de artigos,
+ * chat em tempo real, feed personalizado e análise bibliométrica. CINCO dos
+ * seis descreviam funcionalidade que o produto não tem, e o sexto
+ * ("Assistente IA Avançado") prometia análise de dados e desenvolvimento de
+ * hipóteses, que também não acontece.
+ *
+ * Os quatro abaixo descrevem capacidades que estão no código hoje e podem ser
+ * verificadas abrindo a tela da Dra. Aris. Nenhum menciona número.
+ *
+ * Deliberadamente NÃO incluímos "Panorama do acervo" e "Lacunas de
+ * conhecimento", que a A1 propõe: essas telas são as issues A2 e A3 e ainda
+ * não existem. Anunciá-las agora repetiria exatamente o defeito que esta
+ * issue corrige, só que com texto novo.
+ */
 const features = [
   {
-    icon: Users,
-    title: "Conecte-se com Pesquisadores",
-    description: "Construa sua rede profissional com cientistas e pesquisadores do mundo todo especializados em biologia espacial.",
+    icon: Quote,
+    title: "Respostas com o trecho citado",
+    description:
+      "Cada afirmação vem com o número da passagem que a sustenta. Clicar no número leva ao texto literal do artigo, com revista e DOI.",
   },
   {
-    icon: FileText,
-    title: "Publique Artigos Científicos",
-    description: "Compartilhe suas descobertas, pesquisas e conhecimentos através de artigos bem formatados e revisados pela comunidade.",
+    icon: ShieldCheck,
+    title: "Recusa quando não há lastro",
+    description:
+      "Se o acervo não cobre a pergunta, a resposta é dizer isso — e não arriscar uma resposta plausível sem base. A recusa é o comportamento projetado, não uma falha.",
   },
   {
-    icon: Sparkles,
-    title: "Assistente IA Avançado",
-    description: "Conte com inteligência artificial para auxiliar em suas pesquisas, análises de dados e desenvolvimento de hipóteses.",
+    icon: ScanSearch,
+    title: "Citações conferidas por código",
+    description:
+      "As referências e os trechos entre aspas são verificados contra as passagens recuperadas depois que o texto é gerado. O que não confere perde as aspas e fica registrado.",
   },
   {
-    icon: MessageSquare,
-    title: "Chat em Tempo Real",
-    description: "Colabore diretamente com outros pesquisadores através de mensagens instantâneas e discussões em grupo.",
-  },
-  {
-    icon: Share2,
-    title: "Feed Personalizado",
-    description: "Receba atualizações relevantes sobre pesquisas, descobertas e publicações da sua área de interesse.",
-  },
-  {
-    icon: TrendingUp,
-    title: "Análise Bibliométrica",
-    description: "Acompanhe o impacto de suas publicações e visualize métricas importantes para sua carreira acadêmica.",
+    icon: BookMarked,
+    title: "Referência pronta para citar",
+    description:
+      "Exportação em ABNT ou BibTeX a partir dos metadados bibliográficos do artigo, montada por código. Campo que falta encurta a referência; nunca é inventado.",
   },
 ];
 
@@ -39,15 +50,20 @@ export const Features = () => {
     <section className="py-24 px-4 md:px-6 relative">
       <div className="container mx-auto">
         <div className="text-center mb-16">
+          {/* F0-2: dizia "Tudo que você precisa para colaborar, publicar e
+              avançar sua pesquisa" -- promessa de um produto que não é este. */}
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Recursos <span className="text-gradient">Poderosos</span>
+            Como a <span className="text-gradient">evidência</span> aparece
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Tudo que você precisa para colaborar, publicar e avançar sua pesquisa científica
+            O que separa este sistema de um chatbot: toda afirmação é rastreável
+            até o artigo, e a ausência de evidência é dita em voz alta.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* 2 colunas: com 4 cartões, lg:grid-cols-3 deixaria um órfão na
+              segunda linha. */}
+        <div className="grid md:grid-cols-2 gap-6">
           {features.map((feature, index) => (
             <Card 
               key={index} 
