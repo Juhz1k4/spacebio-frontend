@@ -81,7 +81,7 @@ const Auth = () => {
           <CardHeader>
             <CardTitle className="text-2xl">Bem-vindo</CardTitle>
             <CardDescription>
-              Entre ou crie sua conta para conectar-se com pesquisadores
+              Entre ou crie sua conta para usar o assistente de pesquisa
             </CardDescription>
           </CardHeader>
           <CardContent>

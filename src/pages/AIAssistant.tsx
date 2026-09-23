@@ -1,112 +1,291 @@
-import { useState, useEffect, useRef } from 'react';
+/**
+ * SPACEBIO-024 — Dra. Aris UI V2
+ *
+ * A tela principal do produto. Substitui o chat que exibia apenas
+ * `data.answer` por uma apresentação da cadeia de evidência completa.
+ *
+ * O QUE MUDOU E POR QUÊ
+ * ---------------------
+ * A versão anterior chamava `/chat` e descartava `sources`, `entities`,
+ * `retrieval`, `grounded` e `warnings` — tudo o que distingue este sistema de
+ * um chatbot qualquer. Agora consome `/api/v1/chat` e renderiza o contrato
+ * inteiro (§14).
+ *
+ * A mudança mais importante é conceitual: quando a Dra. Aris responde que não
+ * tem evidência, isso é apresentado como RIGOR, não como erro. Ver
+ * `AnswerStates.tsx`.
+ */
 
-// --- Ícones ---
-const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
+import { useEffect, useRef, useState } from "react";
+import { BookMarked, Send } from "lucide-react";
 
-// --- Placeholder da Imagem ---
-const DrArisAvatar = 'https://placehold.co/128x128/083344/E0F2FE?text=Aris';
+import { ConnectionError } from "@/components/evidence/AnswerStates";
+import { EvidencePanel } from "@/components/evidence/EvidencePanel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ApiError, askAris } from "@/lib/api";
+import { isSynthesisUnavailable, type EvidenceAnswer } from "@/types/evidence";
 
-// --- COMPONENTE DA PÁGINA ---
+const DR_ARIS_AVATAR = "https://placehold.co/128x128/083344/E0F2FE?text=Aris";
+
+const GREETING =
+  "Olá! Sou a Dra. Aris. Respondo sobre biologia espacial usando apenas os " +
+  "artigos indexados no nosso corpus — e digo quando não encontro evidência " +
+  "para sustentar uma resposta.";
+
+/**
+ * Chips de entrada para quem chega sem saber o que perguntar.
+ *
+ * O rótulo é curto e temático; a pergunta enviada é completa e formulada
+ * como a busca espera. Essa separação importa: "🦴 Microgravidade & Ossos"
+ * não é uma boa consulta — falta o verbo e a especificidade que o retriever
+ * usa. O usuário vê o tema, o sistema recebe a pergunta.
+ *
+ * Os quatro temas cobrem os pilares do corpus, verificados na extração de
+ * entidades: perda óssea, expressão gênica, modelos animais e radiação.
+ */
+const SUGGESTION_CHIPS = [
+  {
+    label: "🦴 Microgravidade & Ossos",
+    question: "Como a microgravidade afeta a densidade óssea?",
+  },
+  {
+    label: "🧬 Expressão Gênica RUNX2",
+    question: "Qual o papel do gene RUNX2 na formação óssea durante o voo espacial?",
+  },
+  {
+    // A formulação mudou por medição, não por gosto. "Quais experimentos com
+    // camundongos foram feitos na ISS?" pontua 0,910 e cai ABAIXO do limiar de
+    // 0,92 -- o chip levava a uma recusa. Perguntas por inventário ("quais
+    // foram feitos") casam mal com um corpus que descreve resultados, não
+    // catálogos. Perguntando pelo EFEITO, sobe para 0,9244.
+    label: "🐭 Modelos animais",
+    question: "Como o voo espacial afeta a fisiologia de camundongos?",
+  },
+  {
+    label: "☢️ Radiação",
+    question: "Como a radiação espacial causa danos ao DNA?",
+  },
+];
+
+/** Uma troca: a pergunta e o que voltou (resposta, erro, ou nada ainda). */
+interface Exchange {
+  question: string;
+  answer?: EvidenceAnswer;
+  error?: { message: string; unavailable: boolean };
+}
+
 export default function AIAssistant() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [exchanges, setExchanges] = useState<Exchange[]>([]);
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const chatEndRef = useRef(null);
+  const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMessages([
-      {
-        text: "Olá! Eu sou a Dra. Aris, sua guia pelo fascinante universo da biologia espacial. Como posso te ajudar a explorar nossa vasta base de conhecimento hoje?",
-        isUser: false,
-      },
-    ]);
-  }, []);
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [exchanges, isLoading]);
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  /**
+   * Envia a pergunta.
+   *
+   * `replaceIndex` reexecuta uma troca que já existe, sobrescrevendo-a em vez
+   * de empilhar outra (E3-04). Sem isso, "tentar novamente" repetiria a
+   * pergunta na tela e daria a impressão de que o usuário perguntou duas
+   * vezes — quando o que houve foi uma falha do provedor, não dele.
+   */
+  async function ask(question: string, replaceIndex?: number) {
+    const trimmed = question.trim();
+    if (!trimmed || isLoading) return;
 
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage = { text: input, isUser: true };
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    const currentInput = input;
-    setInput('');
+    const isRetry = replaceIndex !== undefined;
+    if (!isRetry) setInput("");
     setIsLoading(true);
+    setExchanges((previous) => {
+      const next = [...previous];
+      const slot = isRetry ? replaceIndex! : next.length;
+      next[slot] = { question: trimmed };
+      return next;
+    });
+    const slot = isRetry ? replaceIndex! : exchanges.length;
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: currentInput }),
+      const answer = await askAris(trimmed);
+      setExchanges((previous) => {
+        const next = [...previous];
+        next[slot] = { question: trimmed, answer };
+        return next;
       });
 
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      
-      const arisMessage = { text: data.answer, isUser: false };
-      setMessages((prevMessages) => [...prevMessages, arisMessage]);
-    } catch (error) {
-      console.error("Falha ao comunicar com a Dra. Aris:", error);
-      const errorMessage = { text: "Desculpe, estou com interferência na comunicação. Tente novamente.", isUser: false };
-      setMessages((prevMessages) => [...prevMessages, errorMessage]);
+      // E3-04 -- a síntese falhou, mas a evidência veio. A pergunta volta ao
+      // campo para que reexecutar seja um Enter, e não redigitar tudo. O
+      // backend devolveu 200: do ponto de vista da rede nada falhou, então a
+      // interface não pode se comportar como se tivesse.
+      if (isSynthesisUnavailable(answer)) setInput(trimmed);
+    } catch (cause) {
+      // Só chega aqui falha real de comunicação. Falta de evidência volta
+      // como resposta bem-sucedida com `grounded: false`.
+      const apiError = cause instanceof ApiError ? cause : null;
+      // Falha real de rede: o texto também volta ao campo, pela mesma razão.
+      setInput(trimmed);
+      setExchanges((previous) => {
+        const next = [...previous];
+        next[slot] = {
+          question: trimmed,
+          error: {
+            message: apiError?.message ?? "Erro inesperado ao consultar a Dra. Aris.",
+            unavailable: apiError?.unavailable ?? false,
+          },
+        };
+        return next;
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 text-white">
-      <header className="p-4 border-b border-gray-700">
-        <h1 className="text-2xl font-bold">Assistente de IA</h1>
+    <div className="flex h-full flex-col bg-background text-foreground">
+      <header className="border-b border-border px-6 py-4">
+        <div className="flex items-center gap-3">
+          <img
+            src={DR_ARIS_AVATAR}
+            alt=""
+            className="h-10 w-10 rounded-full border-2 border-secondary"
+          />
+          <div>
+            <h1 className="text-xl font-bold">Dra. Aris</h1>
+            <p className="text-xs text-muted-foreground">
+              Assistente científica · responde com evidência do corpus, ou não responde
+            </p>
+          </div>
+        </div>
       </header>
 
-      <main className="flex-1 p-4 overflow-y-auto">
-        <div className="chat-container space-y-4">
-          {messages.map((msg, index) => (
-            <div key={index} className={`flex items-start gap-4 ${msg.isUser ? 'justify-end' : ''}`}>
-              {!msg.isUser && (
-                <img src={DrArisAvatar} alt="Dra. Aris" className="w-10 h-10 rounded-full border-2 border-cyan-400" />
-              )}
-              <div className={`p-3 rounded-lg max-w-xl ${msg.isUser ? 'bg-purple-600' : 'bg-gray-700'}`}>
-                <p style={{whiteSpace: 'pre-wrap'}}>{msg.text}</p>
+      <main className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="mx-auto max-w-3xl space-y-8">
+          {exchanges.length === 0 && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <img
+                  src={DR_ARIS_AVATAR}
+                  alt=""
+                  className="h-9 w-9 rounded-full border-2 border-secondary"
+                />
+                <p className="rounded-lg bg-muted/50 p-3 text-[15px] leading-relaxed">
+                  {GREETING}
+                </p>
+              </div>
+
+              <div className="space-y-3 pl-12">
+                <div className="flex flex-wrap gap-2">
+                  {SUGGESTION_CHIPS.map((chip) => (
+                    <Button
+                      key={chip.label}
+                      variant="outline"
+                      size="sm"
+                      className="h-auto whitespace-normal border-border/60 py-1.5 text-left text-xs hover:border-primary/60 hover:bg-primary/5"
+                      onClick={() => ask(chip.question)}
+                      title={chip.question}
+                    >
+                      {chip.label}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* O banner responde antes da primeira recusa. Um usuário que
+                    sabe o escopo não interpreta "sem evidência" como defeito —
+                    e é a recusa que mais vale explicar de antemão. */}
+                <p className="flex items-start gap-2 rounded-md border border-secondary/30 bg-secondary/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                  <BookMarked className="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary" aria-hidden />
+                  <span>
+                    A Dra. Aris consulta exclusivamente{" "}
+                    <strong className="text-foreground">493 artigos de Biologia Espacial</strong>{" "}
+                    revisados por pares. Fora desse acervo, ela informa que não há
+                    evidência em vez de arriscar uma resposta.
+                  </span>
+                </p>
               </div>
             </div>
+          )}
+
+          {exchanges.map((exchange, index) => (
+            <section key={index} className="space-y-4">
+              <div className="flex justify-end">
+                <p className="max-w-xl rounded-lg bg-primary px-4 py-2 text-[15px] text-primary-foreground">
+                  {exchange.question}
+                </p>
+              </div>
+
+              {exchange.answer && (
+                <div className="flex items-start gap-3">
+                  <img
+                    src={DR_ARIS_AVATAR}
+                    alt=""
+                    className="mt-1 h-9 w-9 shrink-0 rounded-full border-2 border-secondary"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <EvidencePanel
+                      answer={exchange.answer}
+                      onRetry={() => ask(exchange.question, index)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {exchange.error && (
+                <ConnectionError
+                  message={exchange.error.message}
+                  unavailable={exchange.error.unavailable}
+                />
+              )}
+            </section>
           ))}
+
           {isLoading && (
-            <div className="flex items-start gap-4">
-              <img src={DrArisAvatar} alt="Dra. Aris" className="w-10 h-10 rounded-full border-2 border-cyan-400" />
-              <div className="p-3 rounded-lg bg-gray-700">
-                <div className="flex items-center space-x-1">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:-0.3s]"></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:-0.15s]"></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
+            <div className="flex items-start gap-3">
+              <img
+                src={DR_ARIS_AVATAR}
+                alt=""
+                className="h-9 w-9 rounded-full border-2 border-secondary"
+              />
+              <div className="rounded-lg bg-muted/50 px-4 py-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-secondary [animation-delay:-0.3s]" />
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-secondary [animation-delay:-0.15s]" />
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-secondary" />
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    buscando evidência no corpus…
+                  </span>
                 </div>
               </div>
             </div>
           )}
-          <div ref={chatEndRef} />
+
+          <div ref={endRef} />
         </div>
       </main>
 
-      <footer className="p-4 border-t border-gray-700">
-        <form onSubmit={sendMessage} className="flex gap-2 items-center">
-          <input
-            type="text"
+      <footer className="border-t border-border px-6 py-4">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            ask(input);
+          }}
+          className="mx-auto flex max-w-3xl items-center gap-2"
+        >
+          <Input
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Pergunte sobre biologia espacial, pesquisas, análises..."
-            className="flex-1 p-3 bg-gray-800 rounded-full focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Pergunte sobre biologia espacial…"
             disabled={isLoading}
+            className="flex-1"
           />
-          <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white font-bold p-3 rounded-full disabled:bg-gray-600" disabled={isLoading || !input.trim()}>
-            <SendIcon />
-          </button>
+          <Button type="submit" disabled={isLoading || !input.trim()} size="icon">
+            <Send className="h-4 w-4" aria-hidden />
+            <span className="sr-only">Enviar pergunta</span>
+          </Button>
         </form>
       </footer>
     </div>
   );
 }
-
