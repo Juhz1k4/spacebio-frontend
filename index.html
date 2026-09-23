@@ -1,20 +1,52 @@
 <!doctype html>
-<html lang="en">
+<!--
+  F0-2 — metadados da página corrigidos.
+
+  O que havia aqui, e por que cada item saiu:
+
+  lang="en"          o conteúdo é todo em português. O atributo errado faz o
+                     leitor de tela pronunciar o texto com fonemas de inglês,
+                     e o navegador oferecer tradução de uma página já
+                     traduzida.
+
+  título e descrição posicionavam o produto como "rede social para
+                     pesquisadores" que permite "conectar-se e publicar
+                     artigos". Nada disso existe no código.
+
+  og:image e
+  twitter:image      apontavam para uma imagem hospedada em lovable.dev, a
+                     ferramenta que gerou o esqueleto do projeto. A prévia de
+                     compartilhamento exibiria a marca de terceiro no lugar
+                     da nossa.
+
+  twitter:site       era @lovable_dev, atribuindo o projeto a outra conta.
+
+  As duas tags de imagem foram REMOVIDAS, não substituídas: a imagem de
+  compartilhamento (1200×630) é a issue B10, e uma prévia sem imagem é melhor
+  que uma prévia com a marca errada.
+
+  A redação definitiva de posicionamento é escopo da A1; o texto abaixo
+  apenas descreve o que o sistema faz hoje.
+-->
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SpaceBio | Rede Social para Pesquisadores Espaciais</title>
-    <meta name="description" content="Plataforma de rede social para pesquisadores de biologia espacial. Conecte-se, publique artigos e conte com IA para impulsionar suas descobertas." />
+    <title>SpaceBio | Evidência em Biologia Espacial</title>
+    <meta
+      name="description"
+      content="Assistente de pesquisa em biologia espacial: cada resposta vem com o trecho do artigo que a sustenta, e quando não há evidência no acervo, isso é dito."
+    />
     <meta name="author" content="SpaceBio Knowledge Engine" />
 
-    <meta property="og:title" content="SpaceBio | Rede Social para Pesquisadores Espaciais" />
-    <meta property="og:description" content="Plataforma de rede social para pesquisadores de biologia espacial. Conecte-se, publique artigos e conte com IA para impulsionar suas descobertas." />
+    <meta property="og:title" content="SpaceBio | Evidência em Biologia Espacial" />
+    <meta
+      property="og:description"
+      content="Assistente de pesquisa em biologia espacial: cada resposta vem com o trecho do artigo que a sustenta, e quando não há evidência no acervo, isso é dito."
+    />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:card" content="summary" />
   </head>
 
   <body>
