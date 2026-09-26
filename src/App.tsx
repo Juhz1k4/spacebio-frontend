@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
 import Feed from "./pages/Feed";
 import Chat from "./pages/Chat";
@@ -22,7 +23,12 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          {/* A1: `/` e a landing PUBLICA (Hero + Features), sem
+              ProtectedRoute -- antes ela morava dentro do Dashboard e so
+              aparecia depois do login. A area autenticada foi para
+              /dashboard, com o mesmo ProtectedRoute de antes. */}
           <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/ai-assistant" element={<AIAssistant />} />
