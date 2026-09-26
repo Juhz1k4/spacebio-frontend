@@ -18,6 +18,7 @@
  * (§15.7), não uma exceção. Quem trata isso é a interface, não este módulo.
  */
 
+import type { PublicStats } from "@/types/stats";
 import type {
   ChatRequest,
   EvidenceAnswer,
@@ -133,6 +134,21 @@ export async function askAris(
 /** Estado do corpus, do índice e do provedor de LLM. */
 export async function fetchHealth(): Promise<HealthResponse> {
   return request<HealthResponse>("/api/v1/health");
+}
+
+/**
+ * Contagens do acervo para a página inicial (A1).
+ *
+ * Os números vêm do grafo, nunca do código. Ver `src/types/stats.ts` sobre
+ * por que escrevê-los à mão seria o mesmo defeito que a F0-2 removeu, só que
+ * mais difícil de perceber.
+ *
+ * Quem chama precisa tratar a falha: a página inicial tem de renderizar mesmo
+ * com o backend fora do ar. Sem Neo4j, este endpoint responde 503 — e a
+ * página mostra o texto sem os números, em vez de não mostrar nada.
+ */
+export async function fetchStats(): Promise<PublicStats> {
+  return request<PublicStats>("/api/v1/stats");
 }
 
 /** URL resolvida — útil para diagnóstico na interface. */
