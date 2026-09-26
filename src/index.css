@@ -113,6 +113,18 @@ All colors MUST be HSL.
   .text-gradient {
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-nebula);
+
+    /* A1 -- descendentes cortados.
+       Com `background-clip: text`, o glifo e pintado com a caixa de fundo do
+       elemento. Quando a altura de linha e apertada (text-7xl + leading
+       padrao), a caixa termina na linha de base e as hastes que descem -- g,
+       j, p, q, y -- ficam sem pintura e parecem aparadas.
+       Visto em "em biologia espacial" no titulo da pagina inicial: o "g"
+       aparecia cortado ao meio.
+       O padding estende a caixa; a margem negativa devolve o espaco, para
+       que o conserto nao empurre o que vem depois. */
+    padding-bottom: 0.12em;
+    margin-bottom: -0.12em;
   }
 
   .glow-primary {

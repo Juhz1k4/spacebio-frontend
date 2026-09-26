@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookMarked, Quote, ScanSearch, ShieldCheck } from "lucide-react";
 
+import { recursos } from "@/i18n/pt-BR";
+
 /**
  * F0-2 -- CARTÕES REESCRITOS PARA DESCREVER O QUE EXISTE.
  *
@@ -13,10 +15,20 @@ import { BookMarked, Quote, ScanSearch, ShieldCheck } from "lucide-react";
  * Os quatro abaixo descrevem capacidades que estão no código hoje e podem ser
  * verificadas abrindo a tela da Dra. Aris. Nenhum menciona número.
  *
- * Deliberadamente NÃO incluímos "Panorama do acervo" e "Lacunas de
- * conhecimento", que a A1 propõe: essas telas são as issues A2 e A3 e ainda
- * não existem. Anunciá-las agora repetiria exatamente o defeito que esta
- * issue corrige, só que com texto novo.
+ * A1 -- POR QUE CONTINUAM SENDO ESTES QUATRO
+ *
+ * A especificação da A1 pede "Respostas com evidência", "Recusa quando não
+ * há lastro", "Panorama do acervo" e "Lacunas de conhecimento". Os dois
+ * primeiros existem e estão aqui. Os dois últimos são as issues A2 e A3 e
+ * AINDA NÃO EXISTEM -- não há rota, tela nem dado exportado.
+ *
+ * Anunciá-los agora seria promessa sem lastro, que é exatamente o defeito que
+ * a F0-2 removeu desta tela. O próprio plano da Fase Final diz, no princípio
+ * 0.4: "sem evidência, sem afirmação -- vale também para a interface".
+ *
+ * Os dois lugares vagos foram preenchidos com capacidades que existem hoje e
+ * podem ser conferidas abrindo a tela da Dra. Aris. Quando a A2 e a A3
+ * entrarem, os cartões delas substituem estes dois.
  */
 const features = [
   {
@@ -53,11 +65,12 @@ export const Features = () => {
           {/* F0-2: dizia "Tudo que você precisa para colaborar, publicar e
               avançar sua pesquisa" -- promessa de um produto que não é este. */}
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Como a <span className="text-gradient">evidência</span> aparece
+            {recursos.titulo.antes}
+            <span className="text-gradient">{recursos.titulo.destaque}</span>
+            {recursos.titulo.depois}
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            O que separa este sistema de um chatbot: toda afirmação é rastreável
-            até o artigo, e a ausência de evidência é dita em voz alta.
+            {recursos.subtitulo}
           </p>
         </div>
 

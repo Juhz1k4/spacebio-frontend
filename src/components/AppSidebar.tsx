@@ -12,14 +12,24 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { navegacao } from "@/i18n/pt-BR";
 
+// A1 -- rótulos vindos de i18n/pt-BR.ts.
+//
+// "Dashboard" e "AI Assistant" estavam em inglês numa interface toda em
+// português: parece descuido de tradução, não escolha. Viraram "Início" e
+// "Dra. Aris", que é como a assistente é chamada no resto do produto.
+//
+// Os itens de rede social continuam aqui de propósito. Desligar Feed,
+// Mensagens e Perfil é a issue A6, que os põe atrás de uma flag em vez de
+// apagar o código -- e polir agora o que vai sair seria trabalho jogado fora.
 const menuItems = [
-  { title: "Dashboard", url: "/", icon: Home },
-  { title: "Feed", url: "/feed", icon: FileText },
-  { title: "Mensagens", url: "/chat", icon: MessageSquare },
-  { title: "AI Assistant", url: "/ai-assistant", icon: Sparkles },
-  { title: "Perfil", url: "/profile", icon: User },
-  { title: "Configurações", url: "/settings", icon: Settings },
+  { title: navegacao.inicio, url: "/dashboard", icon: Home },
+  { title: navegacao.feed, url: "/feed", icon: FileText },
+  { title: navegacao.mensagens, url: "/chat", icon: MessageSquare },
+  { title: navegacao.assistente, url: "/ai-assistant", icon: Sparkles },
+  { title: navegacao.perfil, url: "/profile", icon: User },
+  { title: navegacao.configuracoes, url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
